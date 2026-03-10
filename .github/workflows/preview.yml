@@ -1,0 +1,58 @@
+name: Preview 배포 (Dev & Feature)
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  Deploy-Preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Github Repository 불러오기
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치하기
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 의존성 설치 및 검증 (Lint, Type, Unit)
+        run: |
+          npm ci
+          npm run lint
+          npm run type-check
+          npm run test
+
+      # E2E 테스트는 Pull Request일 때만 실행하여 리소스를 아낍니다.
+      - name: Playwright 브라우저 설치 및 E2E 테스트 (PR 전용)
+        if: github.event_name == 'pull_request'
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Vercel CLI 설치
+        run: npm install --global vercel@latest
+
+      # Vercel 대시보드에서 Preview 환경으로 설정된 변수들을 가져옵니다.
+      - name: Vercel 환경 정보 가져오기 (Preview)
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      # develop 브랜치인 경우에도 Vercel의 Preview 설정을 따르지만 빌드 속도를 위해 --prod 제외
+      - name: 프로젝트 빌드 (Preview)
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      # Vercel 배포: 
+      # 1. develop 브랜치 push인 경우 Vercel 설정에 따라 고정 도메인이 업데이트됩니다.
+      # 2. PR 브랜치인 경우 일회성 고유 URL이 발급됩니다.
+      - name: Vercel에 프로젝트 배포 (Preview)
+        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
