@@ -1,4 +1,4 @@
-name: Production 배포
+name: Production Deployment
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -6,28 +6,25 @@ env:
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  Deploy-Production:
+  deploy-production:
+    name: Build & Deploy Production
     runs-on: ubuntu-latest
     steps:
-      - name: Github Repository 불러오기
-        uses: actions/checkout@v4
-
-      - name: Node.js 설치하기
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      - name: 의존성 설치 및 검증 (Lint, Type, Unit)
-        run: |
-          npm ci
-          npm run lint
-          npm run type-check
-          npm run test
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build check
+        run: npm run build
 
       - name: Vercel CLI 설치
         run: npm install --global vercel@latest
@@ -37,6 +34,6 @@ jobs:
 
       - name: 프로젝트 빌드 (Production)
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-			
+
       - name: Vercel에 프로젝트 배포 (Production)
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

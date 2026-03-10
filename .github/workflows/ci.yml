@@ -1,14 +1,12 @@
-name: CI
+name: CI (PR Verification)
 
 on:
-  push:
-    branches: [develop]
   pull_request:
     branches: [main, develop]
 
 jobs:
-  lint-and-typecheck:
-    name: Lint & Type Check
+  verify:
+    name: Verify Code
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,43 +15,24 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+      
       - name: Install dependencies
         run: npm ci
+
       - name: Lint check
         run: npm run lint
-      - name: Type check
-        run: npx tsc --noEmit
 
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Run unit tests
+      - name: Type check
+        run: npm run type-check
+
+      - name: Unit tests
         run: npm test
 
-  build-and-e2e:
-    name: Build & E2E Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
+
       - name: Build check
         run: npm run build
-      - name: Run E2E tests
+
+      - name: E2E tests
         run: npx playwright test
